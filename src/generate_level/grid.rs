@@ -3,7 +3,11 @@ use std::f32::consts;
 pub(super) const LEVEL_SIZE: (usize, usize, usize) = (12, 12, 3);
 pub(super) const LEVEL_SCALE: (f32, f32, f32) = (3., 3., 2.5);
 
-pub struct LevelGrid([[[GridTile; LEVEL_SIZE.2]; LEVEL_SIZE.1]; LEVEL_SIZE.0]);
+pub struct LevelGrid(
+    [[[GridTile; LEVEL_SIZE.2]; LEVEL_SIZE.1]; LEVEL_SIZE.0],
+    pub [[u8; LEVEL_SIZE.1]; LEVEL_SIZE.0],
+);
+pub const DIRECTIONS: [(isize, isize); 4] = [(1, 0), (-1, 0), (0, -1), (0, 1)];
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum GridTile {
@@ -86,11 +90,33 @@ impl GridTile {
             _ => Quat::IDENTITY,
         }
     }
+
+    pub fn can_access(self, direction: (isize, isize)) -> bool {
+        // if self.is_bottom_stair_tile() && direction == (0, 1) {
+        //     return true;
+        // }
+        // if self.is_top_stair_tile() && direction == (0, -1) {
+        //     return true;
+        // }
+        match (self, direction) {
+            (GridTile::Empty, _) => false,
+            (GridTile::Floor, (0, 1) | (0, -1) | (1, 0) | (-1, 0)) => true,
+            (GridTile::Floor, _) => false,
+            (GridTile::StairsNorthBottom | GridTile::StairsSouthTop, (0, -1)) => true,
+            (GridTile::StairsSouthBottom | GridTile::StairsNorthTop, (0, 1)) => true,
+            (GridTile::StairsEastBottom | GridTile::StairsWestTop, (1, 0)) => true,
+            (GridTile::StairsWestBottom | GridTile::StairsEastTop, (-1, 0)) => true,
+            _ => false,
+        }
+    }
 }
 
 impl LevelGrid {
-    pub fn new() -> LevelGrid {
-        LevelGrid([[[GridTile::Empty; LEVEL_SIZE.2]; LEVEL_SIZE.1]; LEVEL_SIZE.0])
+    pub fn new(max_height: [[u8; LEVEL_SIZE.1]; LEVEL_SIZE.0]) -> LevelGrid {
+        LevelGrid(
+            [[[GridTile::Empty; LEVEL_SIZE.2]; LEVEL_SIZE.1]; LEVEL_SIZE.0],
+            max_height,
+        )
     }
 
     pub fn get(&self, x: isize, y: isize, z: isize) -> GridTile {
@@ -108,6 +134,21 @@ impl LevelGrid {
 
     pub fn set(&mut self, x: isize, y: isize, z: isize, val: GridTile) {
         self.0[x as usize][y as usize][z as usize] = val;
+    }
+
+    pub fn is_valid_height(&self, x: isize, y: isize, z: isize) -> bool {
+        if x < 0
+            || x >= LEVEL_SIZE.0 as isize
+            || y < 0
+            || y >= LEVEL_SIZE.1 as isize
+            || z < 0
+            || z >= LEVEL_SIZE.2 as isize
+        {
+            return false;
+        }
+
+        let max_height = self.1[x as usize][y as usize];
+        return z <= max_height as isize && z + 1 >= max_height as isize;
     }
 }
 
