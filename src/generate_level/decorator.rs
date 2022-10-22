@@ -1,4 +1,4 @@
-use super::{GridTile, LevelGrid, LEVEL_SCALE};
+use super::grid::{GridTile, LevelGrid, LEVEL_SCALE, LEVEL_SIZE};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use std::f32::consts;
@@ -28,7 +28,7 @@ fn spawn_railing(
 }
 
 pub(super) fn decorate_level(
-    grid: Box<LevelGrid>,
+    grid: &LevelGrid,
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
@@ -61,105 +61,97 @@ pub(super) fn decorate_level(
     let stair_material = materials.add(Color::rgb(0.4, 0.7, 0.8).into());
     let stair_top_material = materials.add(Color::rgb(0.8, 0.4, 0.3).into());
 
-    for x in 0..grid.len() {
-        for y in 0..grid[x].len() {
-            for z in 0..grid[x][y].len() {
-                if grid[x][y][z] != GridTile::Empty && !grid[x][y][z].is_top_stair_tile() {
-                    commands
-                        .spawn_bundle(PbrBundle {
-                            mesh: if grid[x][y][z].is_bottom_stair_tile() {
-                                stairs.clone()
-                            } else {
-                                mesh.clone()
-                            },
-                            material: if grid[x][y][z].is_top_stair_tile() {
-                                stair_material.clone()
-                            } else if grid[x][y][z].is_bottom_stair_tile() {
-                                stair_top_material.clone()
-                            } else {
-                                material.clone()
-                            },
-                            transform: Transform::from_xyz(
-                                x as f32 * LEVEL_SCALE.0,
-                                z as f32 * LEVEL_SCALE.2,
-                                y as f32 * LEVEL_SCALE.1,
-                            )
-                            .with_rotation(grid[x][y][z].get_angle()),
-                            // .with_rotation(Quat::from_rotation_x(
-                            //     ((rng.gen::<f32>() - 0.5) * 20.0_f32).to_radians(),
-                            // )),
-                            ..default()
-                        })
-                        .insert(if grid[x][y][z].is_bottom_stair_tile() {
-                            stair_collider.clone()
-                        } else {
-                            Collider::cuboid(1.5, 0.1, 1.5)
-                        });
-                }
-            }
+    for (x, y, z) in grid {
+        if grid.get(x, y, z) != GridTile::Empty && !grid.get(x, y, z).is_top_stair_tile() {
+            commands
+                .spawn_bundle(PbrBundle {
+                    mesh: if grid.get(x, y, z).is_bottom_stair_tile() {
+                        stairs.clone()
+                    } else {
+                        mesh.clone()
+                    },
+                    material: if grid.get(x, y, z).is_top_stair_tile() {
+                        stair_material.clone()
+                    } else if grid.get(x, y, z).is_bottom_stair_tile() {
+                        stair_top_material.clone()
+                    } else {
+                        material.clone()
+                    },
+                    transform: Transform::from_xyz(
+                        x as f32 * LEVEL_SCALE.0,
+                        z as f32 * LEVEL_SCALE.2,
+                        y as f32 * LEVEL_SCALE.1,
+                    )
+                    .with_rotation(grid.get(x, y, z).get_angle()),
+                    // .with_rotation(Quat::from_rotation_x(
+                    //     ((rng.gen::<f32>() - 0.5) * 20.0_f32).to_radians(),
+                    // )),
+                    ..default()
+                })
+                .insert(if grid.get(x, y, z).is_bottom_stair_tile() {
+                    stair_collider.clone()
+                } else {
+                    Collider::cuboid(1.5, 0.1, 1.5)
+                });
         }
     }
 
-    for x in 0..grid.len() {
-        for y in 0..grid[x].len() {
-            for z in 0..grid[x][y].len() {
-                if grid[x][y][z] != GridTile::Floor {
-                    continue;
-                }
+    for (x, y, z) in grid {
+        if grid.get(x, y, z) != GridTile::Floor {
+            continue;
+        }
 
-                if x == grid.len() - 1 || grid[x + 1][y][z] == GridTile::Empty {
-                    spawn_railing(
-                        commands,
-                        Vec3::new(x as f32 * 3. + 1.5, z as f32 * 2.5, y as f32 * 3. + 1.5),
-                        Quat::from_rotation_y(consts::FRAC_PI_2),
-                        railing_model.clone(),
-                        material.clone(),
-                    )
-                }
-                if x == 0 || grid[x - 1][y][z] == GridTile::Empty {
-                    spawn_railing(
-                        commands,
-                        Vec3::new(x as f32 * 3. - 1.5, z as f32 * 2.5, y as f32 * 3. + 1.5),
-                        Quat::from_rotation_y(consts::FRAC_PI_2),
-                        railing_model.clone(),
-                        material.clone(),
-                    )
-                }
-                if y == grid[x].len() - 1 || grid[x][y + 1][z] == GridTile::Empty {
-                    spawn_railing(
-                        commands,
-                        Vec3::new(x as f32 * 3. - 1.5, z as f32 * 2.5, y as f32 * 3. + 1.5),
-                        Quat::from_rotation_y(0.),
-                        railing_model.clone(),
-                        material.clone(),
-                    )
-                }
-                if y == 0 || grid[x][y - 1][z] == GridTile::Empty {
-                    spawn_railing(
-                        commands,
-                        Vec3::new(x as f32 * 3. - 1.5, z as f32 * 2.5, y as f32 * 3. - 1.5),
-                        Quat::from_rotation_y(0.),
-                        railing_model.clone(),
-                        material.clone(),
-                    )
-                }
-            }
+        if grid.get(x + 1, y, z) == GridTile::Empty {
+            spawn_railing(
+                commands,
+                Vec3::new(x as f32 * 3. + 1.5, z as f32 * 2.5, y as f32 * 3. + 1.5),
+                Quat::from_rotation_y(consts::FRAC_PI_2),
+                railing_model.clone(),
+                material.clone(),
+            )
+        }
+        if grid.get(x - 1, y, z) == GridTile::Empty {
+            spawn_railing(
+                commands,
+                Vec3::new(x as f32 * 3. - 1.5, z as f32 * 2.5, y as f32 * 3. + 1.5),
+                Quat::from_rotation_y(consts::FRAC_PI_2),
+                railing_model.clone(),
+                material.clone(),
+            )
+        }
+        if grid.get(x, y + 1, z) == GridTile::Empty {
+            spawn_railing(
+                commands,
+                Vec3::new(x as f32 * 3. - 1.5, z as f32 * 2.5, y as f32 * 3. + 1.5),
+                Quat::from_rotation_y(0.),
+                railing_model.clone(),
+                material.clone(),
+            )
+        }
+        if grid.get(x, y - 1, z) == GridTile::Empty {
+            spawn_railing(
+                commands,
+                Vec3::new(x as f32 * 3. - 1.5, z as f32 * 2.5, y as f32 * 3. - 1.5),
+                Quat::from_rotation_y(0.),
+                railing_model.clone(),
+                material.clone(),
+            )
         }
     }
 
-    let is_any_plane = |x: usize, y: usize, z: usize| -> bool {
-        if z >= grid[0][0].len() {
+    let is_any_plane = |x: isize, y: isize, z: isize| -> bool {
+        if z >= LEVEL_SIZE.2 as isize {
             return false;
         }
-        return (x > 0 && y > 0 && grid[x - 1][y - 1][z] == GridTile::Floor)
-            || (x > 0 && y < grid[x - 1].len() && grid[x - 1][y][z] == GridTile::Floor)
-            || (y > 0 && x < grid.len() && grid[x][y - 1][z] == GridTile::Floor)
-            || (x < grid.len() && y < grid[x].len() && grid[x][y][z] == GridTile::Floor);
+        return (grid.get(x - 1, y - 1, z) == GridTile::Floor)
+            || (grid.get(x - 1, y, z) == GridTile::Floor)
+            || (grid.get(x, y - 1, z) == GridTile::Floor)
+            || (grid.get(x, y, z) == GridTile::Floor);
     };
 
-    for x in 0..grid.len() + 1 {
-        for y in 0..grid.len() + 1 {
-            for z in 0..grid.len() {
+    for x in 0..LEVEL_SIZE.0 as isize + 1 {
+        for y in 0..LEVEL_SIZE.1 as isize + 1 {
+            for z in 0..LEVEL_SIZE.2 as isize {
                 if is_any_plane(x, y, z) {
                     commands.spawn_bundle(PbrBundle {
                         mesh: if is_any_plane(x, y, z + 1) {

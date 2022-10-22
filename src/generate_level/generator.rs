@@ -1,4 +1,4 @@
-use super::{get_grid_at, GridTile, LevelGrid, LEVEL_SIZE};
+use super::grid::{GridTile, LevelGrid, LEVEL_SIZE};
 use rand::prelude::*;
 
 type CursorPosition = (isize, isize, isize);
@@ -20,8 +20,7 @@ fn generate_options(
             cardinal_direction.1 + cursor_position.1,
         );
 
-        if get_grid_at(
-            &grid,
+        if grid.get(
             offset_tile_position.0,
             offset_tile_position.1,
             cursor_position.2,
@@ -29,55 +28,45 @@ fn generate_options(
         {
             options.push((GridTile::Floor, offset_tile_position, None));
 
-            if offset_tile_position.0 + cardinal_direction.0 > 0
-                && offset_tile_position.1 + cardinal_direction.1 > 0
-                && offset_tile_position.0 + cardinal_direction.0 < grid.len() as isize
-                && offset_tile_position.1 + cardinal_direction.1 < grid[0].len() as isize
-            {
-                let expanded_grid_tile = (
-                    (offset_tile_position.0 + cardinal_direction.0),
-                    (offset_tile_position.1 + cardinal_direction.1),
-                );
+            let expanded_grid_tile = (
+                (offset_tile_position.0 + cardinal_direction.0),
+                (offset_tile_position.1 + cardinal_direction.1),
+            );
 
-                if get_grid_at(
-                    &grid,
-                    offset_tile_position.0,
-                    offset_tile_position.1,
+            if grid.get(
+                offset_tile_position.0,
+                offset_tile_position.1,
+                cursor_position.2 - 1,
+            ) == GridTile::Empty
+                && grid.get(
+                    expanded_grid_tile.0,
+                    expanded_grid_tile.1,
                     cursor_position.2 - 1,
                 ) == GridTile::Empty
-                    && get_grid_at(
-                        &grid,
-                        expanded_grid_tile.0,
-                        expanded_grid_tile.1,
-                        cursor_position.2 - 1,
-                    ) == GridTile::Empty
-                {
-                    options.push((
-                        cardinal_direction.2,
-                        offset_tile_position,
-                        Some(expanded_grid_tile),
-                    ))
-                }
+            {
+                options.push((
+                    cardinal_direction.2,
+                    offset_tile_position,
+                    Some(expanded_grid_tile),
+                ))
+            }
 
-                if get_grid_at(
-                    &grid,
-                    offset_tile_position.0,
-                    offset_tile_position.1,
+            if grid.get(
+                offset_tile_position.0,
+                offset_tile_position.1,
+                cursor_position.2 + 1,
+            ) == GridTile::Empty
+                && grid.get(
+                    expanded_grid_tile.0,
+                    expanded_grid_tile.1,
                     cursor_position.2 + 1,
                 ) == GridTile::Empty
-                    && get_grid_at(
-                        &grid,
-                        expanded_grid_tile.0,
-                        expanded_grid_tile.1,
-                        cursor_position.2 + 1,
-                    ) == GridTile::Empty
-                {
-                    options.push((
-                        cardinal_direction.3,
-                        offset_tile_position,
-                        Some(expanded_grid_tile),
-                    ))
-                }
+            {
+                options.push((
+                    cardinal_direction.3,
+                    offset_tile_position,
+                    Some(expanded_grid_tile),
+                ))
             }
         }
     }
@@ -96,16 +85,15 @@ fn generate_single_path(grid: &mut LevelGrid, mut cursor_position: CursorPositio
             Some((new_tile_type, new_tile_position, new_new_tile_position)) => {
                 // get_grid_at(&grid, new_tile_position.0, new_tile_position.1, cursor_position.2);
                 assert_eq!(
-                    get_grid_at(
-                        &grid,
-                        new_tile_position.0,
-                        new_tile_position.1,
-                        cursor_position.2
-                    ),
+                    grid.get(new_tile_position.0, new_tile_position.1, cursor_position.2),
                     GridTile::Empty
                 );
-                grid[new_tile_position.0 as usize][new_tile_position.1 as usize]
-                    [cursor_position.2 as usize] = *new_tile_type;
+                grid.set(
+                    new_tile_position.0,
+                    new_tile_position.1,
+                    cursor_position.2,
+                    *new_tile_type,
+                );
                 cursor_position.0 = new_tile_position.0;
                 cursor_position.1 = new_tile_position.1;
                 if new_tile_type.is_stair_tile() {
@@ -115,16 +103,23 @@ fn generate_single_path(grid: &mut LevelGrid, mut cursor_position: CursorPositio
                         cursor_position.2 -= 1;
                     }
                     println!("# {:?}", cursor_position);
-                    grid[new_tile_position.0 as usize][new_tile_position.1 as usize]
-                        [cursor_position.2 as usize] =
-                        new_tile_type.get_opposite_stair_tile().unwrap();
+                    grid.set(
+                        new_tile_position.0,
+                        new_tile_position.1,
+                        cursor_position.2,
+                        new_tile_type.get_opposite_stair_tile().unwrap(),
+                    );
 
                     let new_new_tile_position = new_new_tile_position.unwrap();
                     cursor_position.0 = new_new_tile_position.0;
                     cursor_position.1 = new_new_tile_position.1;
 
-                    grid[cursor_position.0 as usize][cursor_position.1 as usize]
-                        [cursor_position.2 as usize] = GridTile::Floor;
+                    grid.set(
+                        cursor_position.0,
+                        cursor_position.1,
+                        cursor_position.2 as isize,
+                        GridTile::Floor,
+                    );
                 }
             }
             None => break,
@@ -133,11 +128,15 @@ fn generate_single_path(grid: &mut LevelGrid, mut cursor_position: CursorPositio
 }
 
 pub(super) fn generate_level_grid() -> Box<LevelGrid> {
-    let mut grid = [[[GridTile::Empty; LEVEL_SIZE.2]; LEVEL_SIZE.1]; LEVEL_SIZE.0];
+    let mut grid = LevelGrid::new();
 
     let cursor_position: CursorPosition = (6, 6, 1);
-    grid[cursor_position.0 as usize][cursor_position.1 as usize][cursor_position.2 as usize] =
-        GridTile::Floor;
+    grid.set(
+        cursor_position.0,
+        cursor_position.1,
+        cursor_position.2,
+        GridTile::Floor,
+    );
 
     generate_single_path(&mut grid, cursor_position);
     generate_single_path(&mut grid, cursor_position);
