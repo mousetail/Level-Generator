@@ -5,8 +5,8 @@ type CursorPosition = (isize, isize, isize);
 
 fn generate_height_limits(rng: &mut ThreadRng) -> [[u8; LEVEL_SIZE.1]; LEVEL_SIZE.0] {
     let size = (
-        rng.gen_range(LEVEL_SIZE.0 / 4..LEVEL_SIZE.0 * 3 / 4),
-        rng.gen_range(LEVEL_SIZE.1 / 4..LEVEL_SIZE.1 * 3 / 4),
+        rng.gen_range(LEVEL_SIZE.0 / 3..LEVEL_SIZE.0 * 3 / 4),
+        rng.gen_range(LEVEL_SIZE.1 / 3..LEVEL_SIZE.1 * 3 / 4),
     );
 
     let position = (

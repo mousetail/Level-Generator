@@ -150,6 +150,14 @@ impl LevelGrid {
         let max_height = self.1[x as usize][y as usize];
         return z <= max_height as isize && z + 1 >= max_height as isize;
     }
+
+    pub fn get_max_height(&self, x: isize, y: isize) -> u8 {
+        if x < 0 || x >= LEVEL_SIZE.0 as isize || y < 0 || y >= LEVEL_SIZE.1 as isize {
+            return 0;
+        }
+
+        return self.1[x as usize][y as usize];
+    }
 }
 
 impl IntoIterator for &LevelGrid {

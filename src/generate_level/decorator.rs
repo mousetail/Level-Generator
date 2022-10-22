@@ -39,6 +39,12 @@ pub(super) fn decorate_level(
     let railing_model: Handle<Mesh> = asset_server.load("Railing.glb#Mesh0/Primitive0");
     let pillar_short_model: Handle<Mesh> = asset_server.load("PillarShort.glb#Mesh0/Primitive0");
     let pillar_tall_model: Handle<Mesh> = asset_server.load("PillarTall.glb#Mesh0/Primitive0");
+    let wall_model: Handle<Mesh> = asset_server.load("Wall.glb#Mesh0/Primitive0");
+    let roof_model: [Handle<Mesh>; 3] = [
+        asset_server.load("Roof.glb#Mesh0/Primitive0"),
+        asset_server.load("Roof.glb#Mesh0/Primitive1"),
+        asset_server.load("Roof.glb#Mesh0/Primitive2"),
+    ];
 
     let floor_texture: Handle<Image> =
         asset_server.load("textures/Marble_TilesDiagonal2_512_albedo.png");
@@ -114,14 +120,82 @@ pub(super) fn decorate_level(
                     (direction.0 as f32).atan2(direction.1 as f32) + consts::PI,
                 );
 
-                spawn_railing(
-                    commands,
-                    Vec3::new(x as f32 * 3., z as f32 * 2.5, y as f32 * 3.)
-                        + angle * Vec3::new(-1.5, 0., -1.5),
-                    angle,
-                    railing_model.clone(),
-                    material.clone(),
-                )
+                if grid.1[x as usize][y as usize] != 1 {
+                    spawn_railing(
+                        commands,
+                        Vec3::new(x as f32 * 3., z as f32 * 2.5, y as f32 * 3.)
+                            + angle * Vec3::new(-1.5, 0., -1.5),
+                        angle,
+                        railing_model.clone(),
+                        material.clone(),
+                    )
+                }
+            }
+        }
+    }
+
+    for x in 0..LEVEL_SIZE.0 {
+        for y in 0..LEVEL_SIZE.1 {
+            if grid.1[x][y] == 1 {
+                for model in &roof_model {
+                    commands.spawn_bundle(PbrBundle {
+                        mesh: model.clone(),
+                        material: material.clone(),
+                        transform: Transform::from_xyz(
+                            x as f32 * LEVEL_SCALE.0,
+                            2. * LEVEL_SCALE.2,
+                            y as f32 * LEVEL_SCALE.1,
+                        ),
+                        ..default()
+                    });
+                }
+            }
+        }
+    }
+
+    let is_covered = |x, y, z| {
+        grid.get_max_height(x, y) == 1// grid.get(x, y, z) == GridTile::Empty
+        && matches!(grid.get(x, y, z), GridTile::Empty | GridTile::OutOfBounds)
+    };
+
+    for x in 0..LEVEL_SIZE.0 as isize + 1 {
+        for y in 0..LEVEL_SIZE.1 as isize + 1 {
+            for z in 0..2 {
+                if is_covered(x - 1, y, z) != is_covered(x, y, z) {
+                    // println!(
+                    //     "is covered {} {} {} = {} / {}",
+                    //     x,
+                    //     y,
+                    //     z,
+                    //     is_covered(x, y, z),
+                    //     is_covered(x - 1, y, z)
+                    // );
+                    commands.spawn_bundle(PbrBundle {
+                        mesh: wall_model.clone(),
+                        material: material.clone(),
+                        transform: Transform::from_xyz(
+                            x as f32 * LEVEL_SCALE.0 - LEVEL_SCALE.0 / 2.0,
+                            z as f32 * LEVEL_SCALE.2,
+                            y as f32 * LEVEL_SCALE.1 - LEVEL_SCALE.1 / 2.0,
+                        )
+                        .with_rotation(Quat::from_rotation_y(-consts::FRAC_PI_2)),
+                        ..default()
+                    });
+                }
+
+                if is_covered(x, y - 1, z) != is_covered(x, y, z) {
+                    commands.spawn_bundle(PbrBundle {
+                        mesh: wall_model.clone(),
+                        material: material.clone(),
+                        transform: Transform::from_xyz(
+                            x as f32 * LEVEL_SCALE.0 - LEVEL_SCALE.0 / 2.0,
+                            z as f32 * LEVEL_SCALE.2,
+                            y as f32 * LEVEL_SCALE.1 - LEVEL_SCALE.1 / 2.0,
+                        ),
+                        //.with_rotation(Quat::from_rotation_y(-consts::FRAC_PI_2)),
+                        ..default()
+                    });
+                }
             }
         }
     }
@@ -130,10 +204,10 @@ pub(super) fn decorate_level(
         if z >= LEVEL_SIZE.2 as isize {
             return 0;
         }
-        return (grid.get(x - 1, y - 1, z) == GridTile::Floor) as u8
-            + (grid.get(x - 1, y, z) == GridTile::Floor) as u8
-            + (grid.get(x, y - 1, z) == GridTile::Floor) as u8
-            + (grid.get(x, y, z) == GridTile::Floor) as u8;
+        return (grid.get(x - 1, y - 1, z) == GridTile::Floor || is_covered(x - 1, y - 1, z)) as u8
+            + (grid.get(x - 1, y, z) == GridTile::Floor || is_covered(x - 1, y, z)) as u8
+            + (grid.get(x, y - 1, z) == GridTile::Floor || is_covered(x, y - 1, z)) as u8
+            + (grid.get(x, y, z) == GridTile::Floor || is_covered(x, y, z)) as u8;
     };
 
     for x in 0..LEVEL_SIZE.0 as isize + 1 {
