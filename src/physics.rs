@@ -42,11 +42,11 @@ fn spawn_player(
             ..Default::default()
         })
         .insert(Friction {
-            coefficient: 2.0,
+            coefficient: 0.0,
             ..default()
         })
         .insert(Damping {
-            linear_damping: 3.0,
+            linear_damping: 8.0,
             ..default()
         })
         .insert(GravityScale(2.0))

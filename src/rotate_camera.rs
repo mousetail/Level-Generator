@@ -94,6 +94,7 @@ fn player_move(
         &Children,
         Entity,
         &mut Velocity,
+        &mut Damping,
     )>,
     q_child: Query<&Transform, With<FlyCam>>,
     rapier_context: Res<RapierContext>,
@@ -101,6 +102,8 @@ fn player_move(
     if let Some(window) = windows.get_primary() {
         for mut transform in query.iter_mut() {
             let grounded = is_grounted(&rapier_context, transform.0.translation, transform.3);
+
+            transform.5.linear_damping = if grounded.grounded { 8.0 } else { 1.0 };
 
             for &child in transform.2 {
                 match q_child.get(child) {
@@ -118,7 +121,7 @@ fn player_move(
                                     KeyCode::D => velocity += right,
                                     KeyCode::Space => {
                                         if grounded.grounded {
-                                            transform.4.linvel += Vec3::Y * 2.
+                                            transform.4.linvel += Vec3::Y * 4.
                                         }
                                     }
                                     _ => (),
@@ -129,7 +132,7 @@ fn player_move(
                             * velocity.normalize_or_zero()
                             + Vec3::Y * 0.01;
                         transform.1.impulse =
-                            velocity * settings.speed * if grounded.grounded { 1.0 } else { 0.5 };
+                            velocity * settings.speed * if grounded.grounded { 1.0 } else { 0.128 };
                     }
                     Err(_) => (),
                 }
