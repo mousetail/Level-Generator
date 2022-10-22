@@ -46,7 +46,7 @@ fn spawn_player(
             ..default()
         })
         .insert(Damping {
-            linear_damping: 1.5,
+            linear_damping: 3.0,
             ..default()
         })
         .insert(GravityScale(2.0))
