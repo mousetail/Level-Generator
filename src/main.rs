@@ -61,7 +61,7 @@ fn setup_level(
 
 fn rotate_camera_system(
     mut cameras: Query<(&mut RotateCamera, &mut Transform)>,
-    mut players: Query<(&physics::PlayerController, &GlobalTransform), Without<RotateCamera>>,
+    players: Query<(&physics::PlayerController, &GlobalTransform), Without<RotateCamera>>,
 ) {
     let mut player_pos = Vec3::ZERO;
 

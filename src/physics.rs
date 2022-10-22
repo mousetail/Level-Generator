@@ -81,8 +81,8 @@ fn spawn_player(
         });
 }
 
-fn print_player_position(query: Query<(&Transform, &PlayerController)>) {
-    // for item in query.iter() {
-    //     println!("{:?}", item.0.translation);
-    // }
+fn print_player_position() { //query: Query<(&Transform, &PlayerController)>) {
+                             // for item in query.iter() {
+                             //     println!("{:?}", item.0.translation);
+                             // }
 }
