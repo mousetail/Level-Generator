@@ -5,8 +5,8 @@ type CursorPosition = (isize, isize, isize);
 
 fn generate_height_limits(rng: &mut ThreadRng) -> [[u8; LEVEL_SIZE.1]; LEVEL_SIZE.0] {
     let size = (
-        rng.gen_range(LEVEL_SIZE.0 / 3..LEVEL_SIZE.0 * 3 / 4),
-        rng.gen_range(LEVEL_SIZE.1 / 3..LEVEL_SIZE.1 * 3 / 4),
+        rng.gen_range(LEVEL_SIZE.0 / 2..LEVEL_SIZE.0 * 3 / 4),
+        rng.gen_range(LEVEL_SIZE.1 / 2..LEVEL_SIZE.1 * 3 / 4),
     );
 
     let position = (
@@ -15,13 +15,13 @@ fn generate_height_limits(rng: &mut ThreadRng) -> [[u8; LEVEL_SIZE.1]; LEVEL_SIZ
     );
 
     let inner_size = (
-        rng.gen_range(size.0 / 4..size.0 * 3 / 4),
-        rng.gen_range(size.1 / 4..size.1 * 3 / 4),
+        rng.gen_range(size.0 / 2..size.0 * 3 / 4),
+        rng.gen_range(size.1 / 2..size.1 * 3 / 4),
     );
 
     let inner_position = (
-        rng.gen_range(0..size.0 - inner_size.0),
-        rng.gen_range(0..size.1 - inner_size.1),
+        rng.gen_range(position.0..position.0 + size.0 - inner_size.0),
+        rng.gen_range(position.1..position.1 + size.1 - inner_size.1),
     );
 
     let mut out = [[0; LEVEL_SIZE.1]; LEVEL_SIZE.0];
@@ -199,6 +199,72 @@ fn generate_single_path(grid: &mut LevelGrid, mut cursor_position: CursorPositio
     }
 }
 
+fn is_dead_end(grid: &LevelGrid, x: isize, y: isize, z: isize) -> bool {
+    let tile = grid.get(x, y, z);
+
+    let mut nr = 0;
+    if tile.is_bottom_stair_tile() && grid.get(x, y, z + 1).is_top_stair_tile() {
+        nr += 1;
+    }
+
+    if tile.is_top_stair_tile() && grid.get(x, y, z - 1).is_bottom_stair_tile() {
+        nr += 1;
+    }
+
+    for direction in DIRECTIONS {
+        if tile.can_access(direction)
+            && grid
+                .get(x + direction.0, y + direction.1, z)
+                .can_access((-direction.0, -direction.1))
+        {
+            nr += 1
+        }
+    }
+
+    return nr == 1;
+}
+
+fn remove_dead_ends(grid: &mut LevelGrid) {
+    let mut nrof_dead_ends_removed = 0;
+    let mut dead_ends = vec![];
+
+    for x in 0..LEVEL_SIZE.0 as isize {
+        for y in 0..LEVEL_SIZE.1 as isize {
+            for z in 0..LEVEL_SIZE.2 as isize {
+                if is_dead_end(grid, x, y, z) {
+                    dead_ends.push((x, y, z));
+                }
+            }
+        }
+    }
+
+    while dead_ends.len() > 0 {
+        let mut new_dead_ends = vec![];
+
+        for (x, y, z) in dead_ends {
+            grid.set(x, y, z, GridTile::Empty);
+            nrof_dead_ends_removed += 1;
+
+            for (x, y, z) in [
+                (x + 1, y, z),
+                (x - 1, y, z),
+                (x, y + 1, z),
+                (x, y - 1, z),
+                (x, y, z - 1),
+                (x, y, z + 1),
+            ] {
+                if is_dead_end(grid, x, y, z) {
+                    new_dead_ends.push((x, y, z));
+                }
+            }
+        }
+
+        dead_ends = new_dead_ends;
+    }
+
+    println!("Removed {nrof_dead_ends_removed} dead ends");
+}
+
 pub(super) fn generate_level_grid() -> Box<LevelGrid> {
     let mut grid = LevelGrid::new(generate_height_limits(&mut rand::thread_rng()));
 
@@ -212,6 +278,8 @@ pub(super) fn generate_level_grid() -> Box<LevelGrid> {
 
     generate_single_path(&mut grid, cursor_position);
     generate_single_path(&mut grid, cursor_position);
+
+    remove_dead_ends(&mut grid);
 
     return Box::new(grid);
 }

@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
+mod cubemap;
 mod generate_level;
 mod physics;
 mod rotate_camera;
+mod util;
 
 fn main() {
     App::new()
@@ -12,6 +14,7 @@ fn main() {
         .add_plugin(physics::PlayerControllerPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(rotate_camera::PlayerPlugin)
+        .add_plugin(cubemap::CubemapPlugin)
         .add_startup_system(setup_level)
         .add_system(rotate_camera_system)
         .run();
@@ -39,16 +42,27 @@ fn setup_level(
         ..default()
     });
 
-    commands.spawn_bundle(PointLightBundle {
-        point_light: PointLight {
-            intensity: 1500.0,
-            shadows_enabled: true,
+    // commands.spawn_bundle(PointLightBundle {
+    //     point_light: PointLight {
+    //         intensity: 1500.0,
+    //         shadows_enabled: true,
+    //         ..default()
+    //     },
+    //     transform: Transform::from_xyz(6.0 * 3., 8.0, 8.0 * 3.),
+    //     ..default()
+    // });
+
+    commands.spawn_bundle(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            illuminance: 32000.0,
             ..default()
         },
-        transform: Transform::from_xyz(6.0 * 3., 8.0, 8.0 * 3.),
+        transform: Transform {
+            rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4),
+            ..default()
+        },
         ..default()
     });
-
     // commands
     //     .spawn()
     //     .insert_bundle(Camera3dBundle {
