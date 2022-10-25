@@ -30,7 +30,7 @@ impl SharedMaterials {
                 base_color_texture: Some(
                     asset_server.load("textures/Plaster_Plain_512_albedo.png"),
                 ),
-                normal_map_texture: Some(asset_server.load("textures/Plaster_Plain_1k_normal.png")),
+                normal_map_texture: Some(asset_server.load("textures/Plaster_Plain_1k_normal.tga")),
                 ..default()
             }),
             generic: materials.add(Color::rgb(1., 1., 1.).into()),
@@ -66,11 +66,19 @@ fn spawn_railing(
         _ => panic!("Invalid wall type"),
     };
 
+    let wall_height = match wall_type {
+        WallType::Short => 0.25,
+        WallType::Tall => 1.25,
+        _ => 0.5,
+    };
+
     commands
         .spawn_bundle(PbrBundle {
             mesh: model[index].clone(),
             material: material[index].clone(),
-            transform: if wall_type == WallType::StairLeft {
+            transform: if wall_type == WallType::StairLeft
+                || (wall_type == WallType::Tall && position.x as isize % 2 == 0)
+            {
                 Transform::from_translation(position + angle * Vec3::new(3., 0., 0.))
                     .with_rotation(Quat::from_rotation_y(consts::PI) * angle)
             } else {
@@ -81,10 +89,10 @@ fn spawn_railing(
         .with_children(|parent| {
             parent
                 .spawn_bundle(TransformBundle {
-                    local: Transform::from_xyz(1.5, 0.25, 0.),
+                    local: Transform::from_xyz(1.5, wall_height, 0.),
                     ..default()
                 })
-                .insert(Collider::cuboid(1.5, 0.25, 0.1));
+                .insert(Collider::cuboid(1.5, wall_height, 0.1));
         });
 }
 
@@ -133,10 +141,19 @@ fn should_build_wall(
     p1: (isize, isize, isize),
     p2: (isize, isize, isize),
 ) -> WallType {
+    // Case 1: Edge of a walkable area and the void.
     if !is_above_walkable(grid, p1.0, p1.1, p1.2)
         && !is_above_walkable(grid, p2.0, p2.1, p2.2)
+        && (p2.2..LEVEL_SIZE.2 as isize)
+            .any(|z| is_walkable(grid, p1.0, p1.1, z) != is_above_walkable(grid, p2.0, p2.1, z))
+    {
+        return WallType::Tall;
+    }
+
+    if is_above_walkable(grid, p1.0, p1.1, p1.2) ^ is_above_walkable(grid, p2.0, p2.1, p2.2)
+        && !grid.can_access(p1, p2)
         && is_above_walkable(grid, p1.0, p1.1, LEVEL_SIZE.2 as isize - 1)
-            != is_above_walkable(grid, p2.0, p2.1, LEVEL_SIZE.2 as isize - 1)
+        && is_above_walkable(grid, p2.0, p2.1, LEVEL_SIZE.2 as isize - 1)
     {
         return WallType::Tall;
     }

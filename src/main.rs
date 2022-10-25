@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 mod cubemap;
+mod fix_normal_mapped_textures;
 mod generate_level;
 mod physics;
 mod rotate_camera;
@@ -9,6 +10,10 @@ mod util;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .insert_resource(bevy::asset::AssetServerSettings {
+            watch_for_changes: true,
+            ..default()
+        })
         // .insert_resource(
         // )
         .add_plugin(physics::PlayerControllerPlugin)
@@ -17,6 +22,8 @@ fn main() {
         .add_plugin(cubemap::CubemapPlugin)
         .add_startup_system(setup_level)
         .add_system(rotate_camera_system)
+        .add_startup_system(enable_hot_reloading)
+        // .add_system(fix_normal_mapped_textures::set_image_color_mode)
         .run();
 }
 
@@ -32,15 +39,15 @@ fn setup_level(
     // level
     generate_level::generate_level(&mut commands, &mut meshes, &mut materials, asset_server);
     // light
-    commands.spawn_bundle(PointLightBundle {
-        point_light: PointLight {
-            intensity: 1500.0,
-            shadows_enabled: true,
-            ..default()
-        },
-        transform: Transform::from_xyz(6.0, 8.0, 4.0),
-        ..default()
-    });
+    // commands.spawn_bundle(PointLightBundle {
+    //     point_light: PointLight {
+    //         intensity: 1500.0,
+    //         shadows_enabled: true,
+    //         ..default()
+    //     },
+    //     transform: Transform::from_xyz(6.0, 8.0, 4.0),
+    //     ..default()
+    // });
 
     // commands.spawn_bundle(PointLightBundle {
     //     point_light: PointLight {
@@ -54,13 +61,37 @@ fn setup_level(
 
     commands.spawn_bundle(DirectionalLightBundle {
         directional_light: DirectionalLight {
-            illuminance: 32000.0,
+            illuminance: 4000.0,
+            color: Color::rgb(0.0, 0.0, 0.9),
+            shadows_enabled: false,
             ..default()
         },
         transform: Transform {
-            rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4),
+            rotation: Quat::from_rotation_y(std::f32::consts::FRAC_PI_8)
+                * Quat::from_rotation_x(-std::f32::consts::FRAC_PI_6 * 2.),
             ..default()
         },
+        ..default()
+    });
+
+    commands.spawn_bundle(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            illuminance: 4000.0,
+            color: Color::rgb(1.0, 1.0, 0.0),
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform {
+            rotation: Quat::from_rotation_y(std::f32::consts::FRAC_PI_8)
+                * Quat::from_rotation_x(-std::f32::consts::FRAC_PI_6 * 2.),
+            ..default()
+        },
+        ..default()
+    });
+
+    commands.insert_resource(AmbientLight {
+        brightness: 0.025,
+        color: Color::rgb(0.0, 0.0, 1.0),
         ..default()
     });
     // commands
@@ -71,6 +102,10 @@ fn setup_level(
     //         ..Default::default()
     //     })
     //     .insert(RotateCamera(0.0));
+}
+
+fn enable_hot_reloading(asset_server: Res<AssetServer>) {
+    asset_server.watch_for_changes().unwrap();
 }
 
 fn rotate_camera_system(

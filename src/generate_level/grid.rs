@@ -158,6 +158,27 @@ impl LevelGrid {
 
         return self.1[x as usize][y as usize];
     }
+
+    pub fn can_access(&self, p1: (isize, isize, isize), p2: (isize, isize, isize)) -> bool {
+        let t1 = self.get(p1.0, p1.1, p1.2);
+        let t2 = self.get(p2.0, p2.1, p2.2);
+        if (p1.0, p1.1, p1.2) == (p2.0, p2.1, p1.2 + 1) {
+            if t1.is_bottom_stair_tile() && t2.is_top_stair_tile() {
+                return true;
+            }
+        }
+        if (p1.0, p1.1, p1.2) == (p2.0, p2.1, p1.2 - 1) {
+            if t2.is_bottom_stair_tile() && t1.is_top_stair_tile() {
+                return true;
+            }
+        }
+        if (p1.2 != p2.2) {
+            return false;
+        }
+
+        return t1.can_access((p2.0 - p1.0, p2.1 - p1.1))
+            && t2.can_access((p1.0 - p2.0, p1.1 - p2.1));
+    }
 }
 
 impl IntoIterator for &LevelGrid {
