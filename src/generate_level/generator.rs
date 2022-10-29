@@ -1,4 +1,4 @@
-use super::grid::{GridTile, LevelGrid, DIRECTIONS, LEVEL_SIZE};
+use super::grid::{GridTile, LevelGrid, DIAGONAL_DIRECTIONS, DIRECTIONS, LEVEL_SIZE};
 use rand::prelude::*;
 
 type CursorPosition = (isize, isize, isize);
@@ -54,6 +54,7 @@ fn generate_options(
     cursor_position: CursorPosition,
 ) -> Vec<(GridTile, (isize, isize), Option<(isize, isize)>)> {
     let mut options = Vec::new();
+    let mut expanded_diagonals = 0;
 
     for cardinal_direction in [
         (-1, 0, GridTile::StairsWestTop, GridTile::StairsEastBottom),
@@ -111,11 +112,22 @@ fn generate_options(
                     cursor_position.2 - 1,
                 )
             {
-                options.push((
-                    cardinal_direction.2,
-                    offset_tile_position,
-                    Some(expanded_grid_tile),
-                ))
+                // Prevent the same stair spawning diagonal from itself, which looks ugly
+                if !DIAGONAL_DIRECTIONS.iter().any(|(a, b)| {
+                    grid.get(
+                        offset_tile_position.0 + a,
+                        offset_tile_position.1 + b,
+                        cursor_position.2,
+                    ) == cardinal_direction.2
+                }) {
+                    options.push((
+                        cardinal_direction.2,
+                        offset_tile_position,
+                        Some(expanded_grid_tile),
+                    ))
+                } else {
+                    expanded_diagonals += 1;
+                }
             }
 
             if grid.get(
@@ -134,13 +146,28 @@ fn generate_options(
                     cursor_position.2 + 1,
                 )
             {
-                options.push((
-                    cardinal_direction.3,
-                    offset_tile_position,
-                    Some(expanded_grid_tile),
-                ))
+                // Prevent the same stair spawning diagonal from itself, which looks ugly
+                if !DIAGONAL_DIRECTIONS.iter().any(|(a, b)| {
+                    grid.get(
+                        offset_tile_position.0 + a,
+                        offset_tile_position.1 + b,
+                        cursor_position.2,
+                    ) == cardinal_direction.3
+                }) {
+                    options.push((
+                        cardinal_direction.3,
+                        offset_tile_position,
+                        Some(expanded_grid_tile),
+                    ))
+                } else {
+                    expanded_diagonals += 1;
+                }
             }
         }
+    }
+
+    if expanded_diagonals > 0 {
+        println!("Removed expanded diagonals: {expanded_diagonals} at {cursor_position:?}");
     }
 
     return options;

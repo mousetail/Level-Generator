@@ -1,15 +1,26 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 mod cubemap;
-mod fix_normal_mapped_textures;
 mod generate_level;
+mod normal_mapped_texture_loader;
 mod physics;
 mod rotate_camera;
 mod util;
+use bevy::render::render_resource::{AddressMode, SamplerDescriptor};
+use bevy::render::texture::ImageSettings;
 
 fn main() {
     App::new()
+        .insert_resource(ImageSettings {
+            default_sampler: SamplerDescriptor {
+                address_mode_u: AddressMode::Repeat,
+                address_mode_v: AddressMode::Repeat,
+                address_mode_w: AddressMode::Repeat,
+                ..default()
+            },
+        })
         .add_plugins(DefaultPlugins)
+        .init_asset_loader::<normal_mapped_texture_loader::NormalMappedImageTextureLoader>()
         .insert_resource(bevy::asset::AssetServerSettings {
             watch_for_changes: true,
             ..default()
@@ -62,23 +73,8 @@ fn setup_level(
     commands.spawn_bundle(DirectionalLightBundle {
         directional_light: DirectionalLight {
             illuminance: 4000.0,
-            color: Color::rgb(0.0, 0.0, 0.9),
-            shadows_enabled: false,
-            ..default()
-        },
-        transform: Transform {
-            rotation: Quat::from_rotation_y(std::f32::consts::FRAC_PI_8)
-                * Quat::from_rotation_x(-std::f32::consts::FRAC_PI_6 * 2.),
-            ..default()
-        },
-        ..default()
-    });
-
-    commands.spawn_bundle(DirectionalLightBundle {
-        directional_light: DirectionalLight {
-            illuminance: 4000.0,
-            color: Color::rgb(1.0, 1.0, 0.0),
-            shadows_enabled: true,
+            color: Color::rgb(1.0, 1.0, 0.9),
+            // shadows_enabled: true,
             ..default()
         },
         transform: Transform {
@@ -91,7 +87,7 @@ fn setup_level(
 
     commands.insert_resource(AmbientLight {
         brightness: 0.025,
-        color: Color::rgb(0.0, 0.0, 1.0),
+        color: Color::rgb(0.25, 0.25, 1.0),
         ..default()
     });
     // commands

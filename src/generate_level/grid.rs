@@ -8,6 +8,7 @@ pub struct LevelGrid(
     pub [[u8; LEVEL_SIZE.1]; LEVEL_SIZE.0],
 );
 pub const DIRECTIONS: [(isize, isize); 4] = [(1, 0), (-1, 0), (0, -1), (0, 1)];
+pub const DIAGONAL_DIRECTIONS: [(isize, isize); 4] = [(1, 1), (-1, 1), (1, -1), (-1, -1)];
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum GridTile {

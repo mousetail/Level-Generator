@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
+const PLAYER_HEIGHT: f32 = 1.0; // 1 m 75 cm
+
 #[derive(Component)]
 pub struct PlayerController;
 
@@ -30,7 +32,7 @@ fn spawn_player(
             linvel: Vec3::ZERO,
             ..Default::default()
         })
-        .insert(Collider::capsule_y(0.75, 0.25))
+        .insert(Collider::capsule_y(PLAYER_HEIGHT / 2.0, 0.25))
         // .insert(Restitution::coefficient(0.7))
         .insert(
             LockedAxes::ROTATION_LOCKED_X
@@ -57,7 +59,7 @@ fn spawn_player(
             parent
                 .spawn()
                 .insert_bundle(Camera3dBundle {
-                    transform: Transform::from_xyz(0., 0., 0.)
+                    transform: Transform::from_xyz(0., PLAYER_HEIGHT / 2.0, 0.)
                         .looking_at(Vec3::new(0., 0., 6.), Vec3::Y),
                     projection: bevy::render::camera::Projection::Perspective(
                         PerspectiveProjection {

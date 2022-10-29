@@ -20,7 +20,7 @@ impl Default for MovementSettings {
     fn default() -> Self {
         Self {
             sensitivity: 0.00012,
-            speed: 0.3,
+            speed: 0.2,
         }
     }
 }
@@ -121,7 +121,7 @@ fn player_move(
                                     KeyCode::D => velocity += right,
                                     KeyCode::Space => {
                                         if grounded.grounded {
-                                            transform.4.linvel += Vec3::Y * 4.
+                                            transform.4.linvel += Vec3::Y * 2.
                                         }
                                     }
                                     _ => (),

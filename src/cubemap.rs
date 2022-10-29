@@ -1,6 +1,5 @@
 use bevy::{
     asset::LoadState,
-    input::mouse::MouseMotion,
     pbr::{MaterialPipeline, MaterialPipelineKey},
     prelude::*,
     reflect::TypeUuid,
@@ -15,7 +14,7 @@ use bevy::{
             TextureViewDescriptor, TextureViewDimension,
         },
         renderer::RenderDevice,
-        texture::{CompressedImageFormats, FallbackImage},
+        texture::FallbackImage,
     },
 };
 
@@ -146,10 +145,6 @@ fn asset_loaded(
     {
         let mut image = images.get_mut(&cubemap.image_handle).unwrap();
 
-        println!(
-            "Layer count: {}",
-            image.texture_descriptor.array_layer_count()
-        );
         // NOTE: PNGs do not have any metadata that could indicate they contain a cubemap texture,
         // so they appear as one texture. The following code reconfigures the texture as necessary.
         if image.texture_descriptor.array_layer_count() == 1 {
@@ -162,11 +157,6 @@ fn asset_loaded(
             });
         }
 
-        println!(
-            "New layer count: {}",
-            image.texture_descriptor.array_layer_count()
-        );
-
         // spawn cube
         let mut updated = false;
         for handle in cubes.iter() {
@@ -178,6 +168,9 @@ fn asset_loaded(
         if !updated {
             commands.spawn_bundle(MaterialMeshBundle::<CubemapMaterial> {
                 mesh: meshes.add(Mesh::from(shape::Cube { size: 10000.0 })),
+                transform: Transform::from_rotation(Quat::from_rotation_x(
+                    std::f32::consts::FRAC_PI_4,
+                )),
                 material: cubemap_materials.add(CubemapMaterial {
                     base_color_texture: Some(cubemap.image_handle.clone()),
                 }),
