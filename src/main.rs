@@ -74,7 +74,7 @@ fn setup_level(
         directional_light: DirectionalLight {
             illuminance: 4000.0,
             color: Color::rgb(1.0, 1.0, 0.9),
-            // shadows_enabled: true,
+            shadows_enabled: true,
             ..default()
         },
         transform: Transform {

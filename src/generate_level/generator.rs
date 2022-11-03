@@ -3,42 +3,61 @@ use rand::prelude::*;
 
 type CursorPosition = (isize, isize, isize);
 
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+struct Rectangle(usize, usize, usize, usize);
+
+impl Rectangle {
+    fn new_random(
+        parent: Rectangle,
+        rng: &mut ThreadRng,
+        min_size: usize,
+        max_size: usize,
+    ) -> Rectangle {
+        let size = (
+            rng.gen_range(min_size.min(parent.2)..max_size.min(parent.2)),
+            rng.gen_range(min_size.min(parent.3)..max_size.min(parent.3)),
+        );
+
+        let position = (
+            rng.gen_range(parent.0..parent.0 + parent.2 - size.0),
+            rng.gen_range(parent.1..parent.1 + parent.3 - size.1),
+        );
+
+        return Rectangle(position.0, position.1, size.0, size.1);
+    }
+
+    fn is_inside(&self, position: (usize, usize)) -> bool {
+        self.0 <= position.0
+            && position.1 < self.0 + self.2
+            && self.1 <= position.1
+            && position.1 < self.1 + self.3
+    }
+}
+
 fn generate_height_limits(rng: &mut ThreadRng) -> [[u8; LEVEL_SIZE.1]; LEVEL_SIZE.0] {
-    let size = (
-        rng.gen_range(LEVEL_SIZE.0 / 2..LEVEL_SIZE.0 * 3 / 4),
-        rng.gen_range(LEVEL_SIZE.1 / 2..LEVEL_SIZE.1 * 3 / 4),
+    let outer_rect_1 = Rectangle::new_random(
+        Rectangle(0, 0, LEVEL_SIZE.0, LEVEL_SIZE.1),
+        rng,
+        LEVEL_SIZE.0 / 2,
+        LEVEL_SIZE.0 * 3 / 4,
     );
 
-    let position = (
-        rng.gen_range(0..LEVEL_SIZE.0 - size.0),
-        rng.gen_range(0..LEVEL_SIZE.1 - size.1),
+    let outer_rect_2 = Rectangle::new_random(
+        Rectangle(0, 0, LEVEL_SIZE.0, LEVEL_SIZE.1),
+        rng,
+        LEVEL_SIZE.0 / 2,
+        LEVEL_SIZE.0 * 3 / 4,
     );
 
-    let inner_size = (
-        rng.gen_range(size.0 / 2..size.0 * 3 / 4),
-        rng.gen_range(size.1 / 2..size.1 * 3 / 4),
-    );
-
-    let inner_position = (
-        rng.gen_range(position.0..position.0 + size.0 - inner_size.0),
-        rng.gen_range(position.1..position.1 + size.1 - inner_size.1),
-    );
+    let inner_rect = Rectangle::new_random(outer_rect_1, rng, LEVEL_SIZE.0 / 5, LEVEL_SIZE.0 / 2);
 
     let mut out = [[0; LEVEL_SIZE.1]; LEVEL_SIZE.0];
 
     for x in 0..LEVEL_SIZE.0 {
         for y in 0..LEVEL_SIZE.1 {
-            out[x][y] = if inner_position.0 <= x
-                && x < inner_position.0 + inner_size.0
-                && inner_position.1 <= y
-                && y < inner_position.1 + inner_size.1
-            {
+            out[x][y] = if inner_rect.is_inside((x, y)) {
                 2
-            } else if position.0 <= x
-                && x < position.0 + size.0
-                && position.1 <= y
-                && y < position.1 + size.1
-            {
+            } else if outer_rect_1.is_inside((x, y)) || outer_rect_2.is_inside((x, y)) {
                 1
             } else {
                 0

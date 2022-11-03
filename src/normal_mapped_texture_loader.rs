@@ -1,6 +1,5 @@
 use bevy::asset::{AssetLoader, Error, LoadContext, LoadedAsset};
-use bevy::prelude::*;
-use bevy::render::texture::{CompressedImageFormats, Image, ImageType, TextureError};
+use bevy::render::texture::{CompressedImageFormats, Image, ImageType};
 use bevy::utils::BoxedFuture;
 
 #[derive(Default)]
@@ -13,9 +12,6 @@ impl AssetLoader for NormalMappedImageTextureLoader {
         load_context: &'a mut LoadContext,
     ) -> BoxedFuture<'a, Result<(), Error>> {
         Box::pin(async move {
-            // use the file extension for the image type
-            let ext = load_context.path().extension().unwrap().to_str().unwrap();
-
             let dyn_img = Image::from_buffer(
                 bytes,
                 ImageType::Extension("png"),

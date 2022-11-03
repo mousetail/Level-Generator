@@ -158,7 +158,8 @@ pub(super) struct SharedModels {
     pub stairs: SimpleModel,
     pub under_stairs: SimpleModel,
     pub wall: SimpleModel,
-    // pub wall_window: SimpleModel,
+    pub wall_window: SimpleModel,
+    pub lamp: SimpleModel,
 }
 
 impl SharedModels {
@@ -194,7 +195,7 @@ impl SharedModels {
                 components: vec![
                     SimpleModelConponent {
                         mesh: asset_server.load("Roof.glb#Mesh0/Primitive0"),
-                        material: materials.roof.clone(),
+                        material: materials.floor.clone(),
                     },
                     SimpleModelConponent {
                         mesh: asset_server.load("Roof.glb#Mesh0/Primitive1"),
@@ -202,7 +203,7 @@ impl SharedModels {
                     },
                     SimpleModelConponent {
                         mesh: asset_server.load("Roof.glb#Mesh0/Primitive2"),
-                        material: materials.floor.clone(),
+                        material: materials.roof.clone(),
                     },
                 ],
                 collider: None,
@@ -244,6 +245,23 @@ impl SharedModels {
                 materials.wall.clone(),
                 Collider::cuboid(1.5, 2.5 / 2., 0.1),
                 Vec3::new(1.5, 2.5 / 2., 0.0),
+            ),
+            wall_window: SimpleModel {
+                components: vec![
+                    SimpleModelConponent {
+                        mesh: asset_server.load("Window.glb#Mesh0/Primitive0"),
+                        material: materials.wall.clone(),
+                    },
+                    SimpleModelConponent {
+                        mesh: asset_server.load("Window.glb#Mesh0/Primitive1"),
+                        material: materials.wood.clone(),
+                    },
+                ],
+                collider: None,
+            },
+            lamp: SimpleModel::new(
+                asset_server.load("Lamp.glb#Mesh0/Primitive0"),
+                materials.generic.clone(),
             ),
         }
     }

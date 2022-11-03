@@ -23,6 +23,7 @@ fn spawn_railing(
         WallType::Short => &models.railing,
         WallType::Tall => &models.wall,
         WallType::StairLeft | WallType::StairRight => &models.stair_railing,
+        WallType::Window => &models.wall_window,
         _ => panic!("Invalid wall type"),
     };
 
@@ -114,6 +115,7 @@ enum WallType {
     StairLeft,
     StairRight,
     Tall,
+    Window,
 }
 
 #[derive(Eq, PartialEq, Copy, Clone)]
@@ -155,7 +157,11 @@ fn should_build_wall(
         && is_above_walkable(grid, p1) != is_above_walkable(grid, p2)
         && !grid.can_access(p1, p2)
     {
-        return WallType::Tall;
+        if !is_walkable(grid, p1) && !is_walkable(grid, p2) {
+            return WallType::Window;
+        } else {
+            return WallType::Tall;
+        }
     }
 
     if !(grid
@@ -323,7 +329,10 @@ fn should_build_arch(
     t1: (isize, isize, isize),
     t2: (isize, isize, isize),
 ) -> ArchType {
-    if should_build_wall(grid, t1, t2) == WallType::Tall {
+    if matches!(
+        should_build_wall(grid, t1, t2),
+        WallType::Tall | WallType::Window
+    ) {
         return ArchType::None;
     }
 
@@ -522,14 +531,50 @@ fn add_vases(
     }
 }
 
+fn add_lights(grid: &LevelGrid, commands: &mut Commands, models: &SharedModels) {
+    for pos in grid {
+        if (pos.0 % 3 == pos.1 % 3)
+            && pos.2 == LEVEL_SIZE.2 as isize - 1
+            && is_indoor(grid, pos.0, pos.1)
+            && is_above_walkable(grid, pos)
+        {
+            commands.spawn_bundle(PointLightBundle {
+                transform: Transform::from_xyz(
+                    pos.0 as f32 * LEVEL_SCALE.0,
+                    pos.2 as f32 * LEVEL_SCALE.2,
+                    pos.1 as f32 * LEVEL_SCALE.1,
+                ),
+                point_light: PointLight {
+                    intensity: 200.0,
+                    range: 7.5,
+                    ..default()
+                },
+                ..default()
+            });
+
+            models.lamp.build(
+                Transform::from_xyz(
+                    pos.0 as f32 * LEVEL_SCALE.0,
+                    pos.2 as f32 * LEVEL_SCALE.2,
+                    pos.1 as f32 * LEVEL_SCALE.1,
+                ),
+                commands.spawn(),
+            )
+        }
+    }
+}
+
 pub(super) fn decorate_level(
     grid: &LevelGrid,
     commands: &mut Commands,
     materials: &mut ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
+    let loading_start = std::time::Instant::now();
     let shared_materials = SharedMaterials::new(materials, &asset_server);
     let shared_models = SharedModels::new(&shared_materials, &asset_server);
+
+    let start_time = std::time::Instant::now();
 
     add_floors(grid, commands, &shared_models);
     add_roofs(grid, commands, &shared_models);
@@ -537,4 +582,13 @@ pub(super) fn decorate_level(
     add_pillars(grid, commands, &shared_models);
     add_vases(grid, commands, &shared_materials, &asset_server);
     build_arches(grid, commands, &shared_models);
+    add_lights(grid, commands, &shared_models);
+
+    let end_time = std::time::Instant::now();
+    let difference = end_time - start_time;
+    println!(
+        "Creating the standard model list look {:?}",
+        start_time - loading_start
+    );
+    println!("Level decoration look {:?}", difference);
 }
